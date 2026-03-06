@@ -6,7 +6,7 @@ define('DB_NAME', 'feedback_db');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('APP_NAME', 'NBSC FeedbackHub');
-define('BASE_URL', 'http://localhost/nbsc');
+define('BASE_URL', 'http://localhost/nbsc/index.php');
 
 try {
     $pdo = new PDO(
