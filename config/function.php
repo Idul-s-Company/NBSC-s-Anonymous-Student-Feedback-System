@@ -30,7 +30,10 @@ function sanitize($val) {
 }
 
 function logActivity($pdo, $userId, $action, $description) {
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] 
+       ?? $_SERVER['REMOTE_ADDR'] 
+       ?? '0.0.0.0';
+    if ($ip === '::1') $ip = '127.0.0.1';
     $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES (?,?,?,?)");
     $stmt->execute([$userId, $action, $description, $ip]);
 }
