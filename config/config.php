@@ -3,7 +3,8 @@ define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'working_schema');
-define('BASE_URL', 'http://localhost/NBSC-s-Anonymous-Student-Feedback-System');
+
+define('BASE_URL', 'http://localhost/nbsc-feedback');
 
 try {
     $pdo = new PDO(
@@ -17,5 +18,5 @@ try {
         ]
     );
 } catch (PDOException $e) {
-    die('Database connection failed: ' . $e->getMessage());
+    die(json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]));
 }
