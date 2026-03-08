@@ -90,9 +90,9 @@ CREATE TABLE user_warnings (
 
 -- SAMPLE DATA FOR USER WARNINGS
 INSERT INTO user_warnings (user_id, reason, content) VALUES
-(1, 'Offensive language', 'Feedback contained inappropriate words directed at a faculty member.'),
-(2, 'Spam submission', 'User repeatedly submitted the same feedback message multiple times.'),
-(3, 'Harassment', 'Feedback included personal attacks toward another student.'),
+(3, 'Offensive language', 'Feedback contained inappropriate words directed at a faculty member.'),
+(3, 'Spam submission', 'User repeatedly submitted the same feedback message multiple times.'),
+(4, 'Harassment', 'Feedback included personal attacks toward another student.'),
 (4, 'Irrelevant feedback', 'Submitted feedback not related to NBSC services or academics.');
 
 CREATE TABLE feedback_reviews (
