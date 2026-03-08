@@ -8,7 +8,7 @@ if (isLoggedIn()) {
     $role = $_SESSION['role'];
     if ($role === 'admin')  redirect(BASE_URL . '/app/admin/dashboard.php');
     if ($role === 'staff')  redirect(BASE_URL . '/app/manager/dashboard.php');
-    redirect(BASE_URL . '/app/user/dashboard.php');
+    redirect(BASE_URL . '/app/user/index.php');
 }
 
 $error = '';
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user['role'] === 'admin')  redirect(BASE_URL . '/app/admin/dashboard.php');
             if ($user['role'] === 'staff')  redirect(BASE_URL . '/app/manager/dashboard.php');
-            redirect(BASE_URL . '/app/user/dashboard.php');
+            redirect(BASE_URL . '/app/user/index.php');
         } else {
             $error = 'Invalid email or password, or your account is inactive.';
         }
