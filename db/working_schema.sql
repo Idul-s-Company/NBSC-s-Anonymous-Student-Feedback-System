@@ -1,5 +1,7 @@
-CREATE DATABASE IF NOT EXISTS feedback_db;
-USE feedback_db;
+START TRANSACTION;
+
+CREATE DATABASE IF NOT EXISTS working_schema;
+USE working_schema;
 
 CREATE TABLE users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,  
@@ -20,20 +22,6 @@ INSERT INTO users (school_id, first_name, last_name, email, password, role, depa
 ('2024-00102','Rhics', 'Geonzon', 'r.geonzon@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi ', 'student', 'IT', 'active'),
 ('2023-00045','Troy', 'Rojo', 't.rojo@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi ', 'student', 'Business', 'inactive');
 
--- Categories Table
-CREATE TABLE categories (
-    category_id INT PRIMARY KEY AUTO_INCREMENT, 
-    category_name VARCHAR(50) NOT NULL,
-    description VARCHAR(200) NOT NULL);
-
--- SAMPLE DATA FOR CATEGORIES
-INSERT INTO categories (category_name, description) VALUES
-('Academic','Concerns related to courses, grading, and curriculum'),
-('Facilities','Concerns about campus buildings, rooms, and equipment'),
-('Faculty','Concerns regarding teachers and their conduct'),
-('Services','Administrative and student services concerns'),
-('Safety','Campus safety, security, and emergency concerns'),
-('Other','General or miscellaneous feedback');
 
 -- Activity Logs Table
 CREATE TABLE activity_logs (
@@ -56,33 +44,56 @@ INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES
 
 CREATE TABLE feedback (
     feedback_id INT PRIMARY KEY AUTO_INCREMENT,
-    category_id INT,
+    category ENUM('general', 'academic', 'facilities', 'services', 'faculty', 'administration', 'suggestion', 'complaint', 'other') DEFAULT 'general',
     priority ENUM('Low', 'Medium', 'High', 'Urgent') DEFAULT 'Low',
     message VARCHAR(200) NOT NULL,
     status ENUM('pending', 'reviewed', 'resolved') DEFAULT 'pending',
-    submitted_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (category_id) REFERENCES categories(category_id)
-);  
+    submitted_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+); 
 
 -- SAMPLE DATA FOR FEEDBACK
-INSERT INTO feedback (category_id, priority, message, status) VALUES
-(1, 'High',   'The grading system for our major subjects lacks transparency. A clear, published rubric would greatly help.', 'pending'),
-(2, 'Urgent', 'The restrooms near the Engineering building have been broken for over two weeks.', 'reviewed'),
-(3, 'High',   'One of our professors consistently starts class 20-30 minutes late without covering required topics.', 'pending'),
-(4, 'Medium', 'The registration portal was extremely slow and kept timing out during enrollment.', 'resolved');
+INSERT INTO feedback (category, priority, message, status) VALUES
+('academic', 'High',   'The grading system for our major subjects lacks transparency. A clear, published rubric would greatly help.', 'pending'),
+('services', 'Urgent', 'The restrooms near the Engineering building have been broken for over two weeks.', 'reviewed'),
+('facilities', 'High',   'One of our professors consistently starts class 20-30 minutes late without covering required topics.', 'pending'),
+('administration', 'Medium', 'The registration portal was extremely slow and kept timing out during enrollment.', 'resolved');
 
--- Feedback Attachments Table
-CREATE TABLE feedback_attachments (
-    attachment_id INT AUTO_INCREMENT PRIMARY KEY,
-    feedback_id   INT NOT NULL,
-    file_name     VARCHAR(255) NOT NULL,
-    file_path     VARCHAR(500) NOT NULL,
-    file_type     VARCHAR(80),
-    file_size_kb  INT,
-    uploaded_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+-- Comments Table
+CREATE TABLE comments (
+    comment_id INT AUTO_INCREMENT PRIMARY KEY,
+    feedback_id INT NOT NULL,
+    encrypted_user_id TEXT NOT NULL,
+    anonymous_id VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    status ENUM('active', 'deleted', 'flagged') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (feedback_id) REFERENCES feedback(feedback_id)
 );
+
+-- SAMPLE DATA FOR COMMENTS
+INSERT INTO comments (feedback_id, encrypted_user_id, anonymous_id, content, status, created_at) VALUES
+(1, 'encrypted_3_xyz789def', 'anon_c1d2e3f4g5h6', 'I completely agree! We need better transparency in grading. Students should know exactly how they are being evaluated.', 'active', '2024-01-15 10:30:00'),
+(1, 'encrypted_2_abc123ghi', 'anon_i7j8k9l0m1n2', 'Has anyone tried talking to the department head about this? Maybe we should organize a petition.', 'active', '2024-01-15 14:45:00'),
+(2, 'encrypted_4_jkl456mno', 'anon_o3p4q5r6s7t8', 'This has been an issue for months! Thank you for finally reporting it. The facilities team needs to prioritize this.', 'active', '2024-01-16 09:20:00'),
+(2, 'encrypted_3_pqr789stu', 'anon_u9v0w1x2y3z4', 'Update: I just checked and the restrooms are still not fixed. This is really unacceptable for a university facility.', 'active', '2024-01-17 16:15:00');
+
+
+-- User warnings table (track violations)
+CREATE TABLE user_warnings (
+    user_warnings_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    reason VARCHAR(255) NOT NULL,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- SAMPLE DATA FOR USER WARNINGS
+INSERT INTO user_warnings (user_id, reason, content) VALUES
+(1, 'Offensive language', 'Feedback contained inappropriate words directed at a faculty member.'),
+(2, 'Spam submission', 'User repeatedly submitted the same feedback message multiple times.'),
+(3, 'Harassment', 'Feedback included personal attacks toward another student.'),
+(4, 'Irrelevant feedback', 'Submitted feedback not related to NBSC services or academics.');
 
 CREATE TABLE feedback_reviews (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -120,29 +131,20 @@ INSERT INTO notifications (user_id, title, message, is_read) VALUES
 (2, 'New Feedback Submitted', 'A new High priority feedback submitted under Academic.', 0),
 (3, 'Feedback Resolved', 'Feedback NBSC-J7K8L has been marked as resolved.', 1);
 
--- Query to Retrieve All Feedback with Category
-SELECT
-    c.category_name,
-    f.priority,
-    f.message,
-    f.status,
-    f.submitted_at
-FROM feedback f
-INNER JOIN categories c ON f.category_id = c.category_id
-ORDER BY f.submitted_at DESC;
 
 -- Query to Retrieve Feedback with Admin Review Notes
 SELECT
-    c.category_name,
+    f.feedback_id,
+    f.category,
     f.priority,
     f.status,
-    r.notes AS admin_notes,
+    r.review_notes AS admin_notes,
     CONCAT(u.first_name, ' ', u.last_name) AS reviewed_by,
     r.reviewed_at
 FROM feedback f
-INNER JOIN categories c ON f.category_id = c.category_id
 INNER JOIN feedback_reviews r ON f.feedback_id = r.feedback_id
-INNER JOIN users u ON r.reviewed_by = u.user_id;
+INNER JOIN users u ON r.reviewed_by = u.user_id
+ORDER BY r.reviewed_at DESC;
 
 -- Query to Retrieve Activity Logs with User Information
 SELECT
@@ -155,7 +157,36 @@ SELECT
     a.ip_address,
     a.created_at
 FROM activity_logs a
-INNER JOIN users u ON a.user_id = u.user_id;
+INNER JOIN users u 
+ON a.user_id = u.user_id
+ORDER BY a.created_at DESC;
+
+-- Query to Retrieve Comments with Feedback Information
+SELECT
+    c.comment_id,
+    f.category,
+    f.message AS feedback_message,
+    c.anonymous_id,
+    c.content AS comment,
+    c.status,
+    c.created_at
+FROM comments c
+INNER JOIN feedback f 
+ON c.feedback_id = f.feedback_id
+ORDER BY c.created_at DESC;
+
+-- Query to Retrieve User Warnings with User Information
+SELECT
+    w.user_warnings_id,
+    CONCAT(u.first_name, ' ', u.last_name) AS warned_user,
+    u.role,
+    w.reason,
+    w.content,
+    w.created_at
+FROM user_warnings w
+INNER JOIN users u
+ON w.user_id = u.user_id
+ORDER BY w.created_at DESC;
 
 -- Query to Retrieve All Users
 SELECT
@@ -169,3 +200,21 @@ SELECT
     created_at
 FROM users
 ORDER BY role, last_name ASC;
+
+-- Query to Retrieve Feedback with Admin Review Notes and Reviewer Information
+SELECT
+    f.feedback_id,
+    f.category,
+    f.priority,
+    f.message,
+    f.status,
+    CONCAT(u.first_name,' ',u.last_name) AS reviewed_by,
+    r.review_notes,
+    r.reviewed_at
+FROM feedback f
+INNER JOIN feedback_reviews r 
+ON f.feedback_id = r.feedback_id
+INNER JOIN users u 
+ON r.reviewed_by = u.user_id;
+
+COMMIT;
