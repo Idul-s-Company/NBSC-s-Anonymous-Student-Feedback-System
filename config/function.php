@@ -35,8 +35,12 @@ function logActivity($pdo, $userId, $action, $description) {
     $stmt->execute([$userId, $action, $description, $ip]);
 }
 
-function generateFeedbackCode() {
-    return 'NBSC-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
+function generateAnonymousId() {
+    return 'anon_' . substr(md5(uniqid(rand(), true)), 0, 12);
+}
+
+function encryptUserId($userId) {
+    return 'encrypted_' . $userId . '_' . substr(md5($userId . 'nbsc_salt'), 0, 8);
 }
 
 function timeAgo($datetime) {
@@ -70,8 +74,27 @@ function roleBadge($r) {
     return "<span class='badge $cls'>" . ucfirst($r) . "</span>";
 }
 
+function categoryLabel($c) {
+    return ucfirst(str_replace('_', ' ', $c));
+}
+
 function getUnreadNotifCount($pdo, $userId) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
     $stmt->execute([$userId]);
     return $stmt->fetchColumn();
+}
+
+function categoryIcon($cat) {
+    $icons = [
+        'academic'       => '📚',
+        'facilities'     => '🏫',
+        'services'       => '🛎️',
+        'faculty'        => '👨‍🏫',
+        'administration' => '🏛️',
+        'suggestion'     => '💡',
+        'complaint'      => '⚠️',
+        'general'        => '💬',
+        'other'          => '📝',
+    ];
+    return $icons[$cat] ?? '💬';
 }
