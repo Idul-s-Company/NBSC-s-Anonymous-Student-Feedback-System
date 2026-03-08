@@ -21,6 +21,30 @@ $urgentCount   = $pdo->query("SELECT COUNT(*) FROM feedback WHERE priority='Urge
 $totalWarnings = $pdo->query("SELECT COUNT(*) FROM user_warnings")->fetchColumn();
 $totalComments = $pdo->query("SELECT COUNT(*) FROM comments WHERE status='active'")->fetchColumn();
 
+// Chart data: feedback by category
+$catData = $pdo->query("SELECT category, COUNT(*) AS cnt FROM feedback GROUP BY category")->fetchAll();
+$catLabels = array_column($catData, 'category');
+$catCounts = array_column($catData, 'cnt');
+
+// Chart data: feedback by status
+$statusData = [$pendingCount, $reviewedCount, $resolvedCount];
+
+// Chart data: feedback by priority
+$priData = $pdo->query("SELECT priority, COUNT(*) AS cnt FROM feedback GROUP BY priority")->fetchAll();
+$priLabels = array_column($priData, 'priority');
+$priCounts = array_column($priData, 'cnt');
+
+// Chart data: feedback submitted per day (last 7 days)
+$dailyData = $pdo->query("
+    SELECT DATE(submitted_at) AS day, COUNT(*) AS cnt
+    FROM feedback
+    WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    GROUP BY DATE(submitted_at)
+    ORDER BY day ASC
+")->fetchAll();
+$dailyLabels = array_column($dailyData, 'day');
+$dailyCounts = array_column($dailyData, 'cnt');
+
 $recentFeedback = $pdo->query("SELECT * FROM feedback ORDER BY submitted_at DESC LIMIT 5")->fetchAll();
 $recentLogs = $pdo->query("
     SELECT a.*, CONCAT(u.first_name,' ',u.last_name) AS full_name
@@ -31,6 +55,10 @@ $recentLogs = $pdo->query("
 renderHeader('Admin Dashboard');
 renderSidebar('admin', 'Dashboard');
 ?>
+
+<!-- Bootstrap CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
 <div class="topbar">
   <span class="topbar-title">Dashboard</span>
   <div class="topbar-actions">
@@ -42,18 +70,47 @@ renderSidebar('admin', 'Dashboard');
     </a>
   </div>
 </div>
+
 <div class="content">
   <div class="page-header">
     <h1>Admin Dashboard</h1>
     <p>Welcome back, <?= sanitize($_SESSION['first_name']) ?>. System overview.</p>
   </div>
 
+  <!-- User Stats -->
   <div class="stats-grid">
     <div class="stat-card purple"><div class="stat-label">Total Users</div><div class="stat-value"><?= $totalUsers ?></div></div>
     <div class="stat-card blue"><div class="stat-label">Admins</div><div class="stat-value"><?= $totalAdmins ?></div></div>
     <div class="stat-card green"><div class="stat-label">Staff</div><div class="stat-value"><?= $totalStaff ?></div></div>
     <div class="stat-card orange"><div class="stat-label">Students</div><div class="stat-value"><?= $totalStudents ?></div></div>
   </div>
+
+  <!-- Charts Row -->
+  <div class="row g-3 mb-4">
+
+    <!-- Donut: Users by Role -->
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header"><span class="card-title">Users by Role</span></div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <canvas id="chartUserRole" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar: Feedback by Category -->
+    <div class="col-md-8">
+      <div class="card h-100">
+        <div class="card-header"><span class="card-title">Feedback by Category</span></div>
+        <div class="card-body">
+          <canvas id="chartCategory" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Feedback Stats -->
   <div class="stats-grid">
     <div class="stat-card blue"><div class="stat-label">Total Feedback</div><div class="stat-value"><?= $totalFeedback ?></div></div>
     <div class="stat-card orange"><div class="stat-label">Pending</div><div class="stat-value"><?= $pendingCount ?></div></div>
@@ -64,6 +121,42 @@ renderSidebar('admin', 'Dashboard');
     <div class="stat-card blue"><div class="stat-label">Comments</div><div class="stat-value"><?= $totalComments ?></div></div>
   </div>
 
+  <!-- Charts Row 2 -->
+  <div class="row g-3 mb-4">
+
+    <!-- Donut: Feedback by Status -->
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header"><span class="card-title">Feedback by Status</span></div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+          <canvas id="chartStatus" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bar: Feedback by Priority -->
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header"><span class="card-title">Feedback by Priority</span></div>
+        <div class="card-body">
+          <canvas id="chartPriority" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Line: Submissions (Last 7 Days) -->
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header"><span class="card-title">Submissions (Last 7 Days)</span></div>
+        <div class="card-body">
+          <canvas id="chartDaily" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Recent Feedback + Activity -->
   <div class="row">
     <div class="col-8">
       <div class="card">
@@ -106,5 +199,108 @@ renderSidebar('admin', 'Dashboard');
       </div>
     </div>
   </div>
+
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const catLabels  = <?= json_encode(array_map('ucfirst', $catLabels)) ?>;
+const catCounts  = <?= json_encode(array_map('intval', $catCounts)) ?>;
+const priLabels  = <?= json_encode($priLabels) ?>;
+const priCounts  = <?= json_encode(array_map('intval', $priCounts)) ?>;
+const dailyLabels = <?= json_encode($dailyLabels) ?>;
+const dailyCounts = <?= json_encode(array_map('intval', $dailyCounts)) ?>;
+
+// Donut: Users by Role
+new Chart(document.getElementById('chartUserRole'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Admins', 'Staff', 'Students'],
+    datasets: [{
+      data: [<?= $totalAdmins ?>, <?= $totalStaff ?>, <?= $totalStudents ?>],
+      backgroundColor: ['#7e3af2','#1a56db','#0e9f6e'],
+      borderWidth: 2, borderColor: '#fff'
+    }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%', responsive: true }
+});
+
+// Bar: Feedback by Category
+new Chart(document.getElementById('chartCategory'), {
+  type: 'bar',
+  data: {
+    labels: catLabels,
+    datasets: [{
+      label: 'Feedback Count',
+      data: catCounts,
+      backgroundColor: ['#1a56db','#7e3af2','#0e9f6e','#e3a008','#e02424','#6366f1','#f59e0b','#10b981','#ef4444'],
+      borderRadius: 6, borderSkipped: false
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+    responsive: true
+  }
+});
+
+// Donut: Feedback by Status
+new Chart(document.getElementById('chartStatus'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Pending', 'Reviewed', 'Resolved'],
+    datasets: [{
+      data: <?= json_encode($statusData) ?>,
+      backgroundColor: ['#e3a008','#1a56db','#0e9f6e'],
+      borderWidth: 2, borderColor: '#fff'
+    }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%', responsive: true }
+});
+
+// Bar: Feedback by Priority
+new Chart(document.getElementById('chartPriority'), {
+  type: 'bar',
+  data: {
+    labels: priLabels,
+    datasets: [{
+      label: 'Count',
+      data: priCounts,
+      backgroundColor: ['#0e9f6e','#e3a008','#f97316','#e02424'],
+      borderRadius: 6, borderSkipped: false
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+    responsive: true
+  }
+});
+
+// Line: Daily submissions
+new Chart(document.getElementById('chartDaily'), {
+  type: 'line',
+  data: {
+    labels: dailyLabels.length ? dailyLabels : ['No data'],
+    datasets: [{
+      label: 'Submissions',
+      data: dailyCounts.length ? dailyCounts : [0],
+      borderColor: '#1a56db',
+      backgroundColor: 'rgba(26,86,219,0.08)',
+      pointBackgroundColor: '#1a56db',
+      fill: true, tension: 0.4, borderWidth: 2
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+    responsive: true
+  }
+});
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <?php renderSidebarClose(); renderFooter(); ?>
