@@ -430,6 +430,8 @@ $myIds = $_SESSION['submitted_ids'] ?? [];
       <?php endif; ?>
     </div>
 
+    // This part must be fixed because after the user log out then logged in, his submissions are removed
+
     <div id="tab-mine" style="display:none;">
       <?php
       $mineList = [];
