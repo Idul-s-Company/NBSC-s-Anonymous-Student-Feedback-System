@@ -344,6 +344,8 @@ $myIds = $_SESSION['submitted_ids'] ?? [];
               oninput="updateCount()"></textarea>
             <div class="char-count"><span id="char-count">0</span>/200</div>
 
+            // 2. this might also have a code to add feature //
+
             <button type="submit" name="submit_feedback" class="submit-btn">Send Anonymously 🔒</button>
           </form>
         <?php endif; ?>
