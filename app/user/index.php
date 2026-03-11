@@ -15,8 +15,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $allowed_pri  = ['Low','Medium','High','Urgent'];
 
     if (in_array($category,$allowed_cats) && in_array($priority,$allowed_pri) && strlen($message)>=10 && strlen($message)<=200) {
-        $pdo->prepare("INSERT INTO feedback (category,priority,message,status) VALUES (?,?,?,'pending')")
-            ->execute([$category,$priority,$message]);
+       $pdo->prepare("INSERT INTO feedback (user_id, category, priority, message, status) VALUES (?,?,?,?,'pending')")
+    ->execute([$_SESSION['user_id'], $category, $priority, $message]);
         $fid = $pdo->lastInsertId();
         $_SESSION['submitted_ids'][] = $fid;
 
@@ -436,13 +436,23 @@ $myIds = $_SESSION['submitted_ids'] ?? [];
 
     <div id="tab-mine" style="display:none;">
       <?php
-      $mineList = [];
-      if (!empty($myIds)) {
-          $ph = implode(',',array_fill(0,count($myIds),'?'));
-          $s  = $pdo->prepare("SELECT f.*, (SELECT COUNT(*) FROM comments c WHERE c.feedback_id=f.feedback_id AND c.status='active') AS comment_count, r.review_notes FROM feedback f LEFT JOIN feedback_reviews r ON f.feedback_id=r.feedback_id WHERE f.feedback_id IN ($ph) ORDER BY f.submitted_at DESC");
-          $s->execute($myIds);
-          $mineList = $s->fetchAll();
-      }
+      $myIds = $pdo->prepare("SELECT feedback_id FROM feedback WHERE user_id = ?");
+$myIds->execute([$_SESSION['user_id']]);
+$myIds = array_column($myIds->fetchAll(), 'feedback_id');
+
+$mineList = [];
+if (!empty($myIds)) {
+    $ph = implode(',', array_fill(0, count($myIds), '?'));
+    $s  = $pdo->prepare("SELECT f.*, 
+        (SELECT COUNT(*) FROM comments c WHERE c.feedback_id=f.feedback_id AND c.status='active') AS comment_count,
+        r.review_notes 
+        FROM feedback f 
+        LEFT JOIN feedback_reviews r ON f.feedback_id=r.feedback_id 
+        WHERE f.feedback_id IN ($ph) 
+        ORDER BY f.submitted_at DESC");
+    $s->execute($myIds);
+    $mineList = $s->fetchAll();
+}
       ?>
       <?php if (empty($mineList)): ?>
         <div class="feed-empty">
@@ -522,6 +532,7 @@ function toggleComments(id) {
   const el = document.getElementById('comments-'+id);
   el.classList.toggle('open');
 }
+
 </script>
 </body>
 </html>
