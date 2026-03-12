@@ -32,11 +32,21 @@ function sanitize($val) {
     return htmlspecialchars(trim($val), ENT_QUOTES, 'UTF-8');
 }
 
-function logActivity($pdo, $action, $description, $userId = null) {
+function logActivity($pdo, $userId = null, $action = '', $description = '') {
     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] 
        ?? $_SERVER['REMOTE_ADDR'] 
        ?? '0.0.0.0';
     if ($ip === '::1') $ip = '127.0.0.1';
+
+    // Guard against FK violation if the user_id doesn't exist in users table
+    if ($userId !== null) {
+        $check = $pdo->prepare("SELECT 1 FROM users WHERE user_id = ?");
+        $check->execute([$userId]);
+        if (!$check->fetchColumn()) {
+            $userId = null;
+        }
+    }
+
     $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES (?,?,?,?)");
     $stmt->execute([$userId, $action, $description, $ip]);
 }
