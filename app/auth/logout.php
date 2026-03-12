@@ -5,12 +5,10 @@ require_once __DIR__ . '/../../config/function.php';
 
 // Log activity before destroying session
 if (isset($_SESSION['user_id'])) {
-    // Admin or staff logout
     $name = ($_SESSION['first_name'] ?? 'User') . ' ' . ($_SESSION['last_name'] ?? '');
-    logActivity($pdo, 'LOGOUT', sanitize($name) . ' logged out', $_SESSION['user_id']);
+    logActivity($pdo, $_SESSION['user_id'], 'LOGOUT', sanitize($name) . ' logged out');
 } elseif (isset($_SESSION['oauth_user_id'])) {
-    // Student OAuth logout
-    logActivity($pdo, 'LOGOUT', ($_SESSION['oauth_name'] ?? 'Student') . ' logged out', $_SESSION['oauth_user_id']);
+    logActivity($pdo, $_SESSION['oauth_user_id'], 'LOGOUT', ($_SESSION['oauth_name'] ?? 'Student') . ' logged out');
 }
 
 // Clear all session data
