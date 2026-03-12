@@ -21,7 +21,7 @@ INSERT INTO users (school_id, first_name, last_name, email, password, role, depa
 ('S-0008', 'Rosa', 'Villanueva', 'r.villanueva@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi ', 'staff', 'SAS', 'active'),
 ('2024-00102','Rhics', 'Geonzon', '20231317@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi ', 'student', 'IT', 'active'),
 ('2023-00045','Troy', 'Rojo', 't.rojo@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi ', 'student', 'Business', 'inactive');
-('2023-00047','Francis', 'Idul', '20231685@nbsc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi ', 'student', 'IT', 'active');
+
 
 -- Activity Logs Table
 CREATE TABLE activity_logs (
