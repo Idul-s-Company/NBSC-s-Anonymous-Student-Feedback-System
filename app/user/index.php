@@ -344,7 +344,7 @@ $myIds = $_SESSION['submitted_ids'] ?? [];
               oninput="updateCount()"></textarea>
             <div class="char-count"><span id="char-count">0</span>/200</div>
 
-            // 2. this might also have a code to add feature //
+        
 
             <button type="submit" name="submit_feedback" class="submit-btn">Send Anonymously 🔒</button>
           </form>
@@ -431,8 +431,6 @@ $myIds = $_SESSION['submitted_ids'] ?? [];
         </div>
       <?php endif; ?>
     </div>
-
-    // This part must be fixed because after the user log out then logged in, his submissions are removed
 
     <div id="tab-mine" style="display:none;">
       <?php
