@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         $pdo->prepare("UPDATE feedback SET status=? WHERE feedback_id=?")->execute([$status, $fid]);
         $pdo->prepare("INSERT INTO feedback_reviews (feedback_id, reviewed_by, review_notes, status_changed) VALUES (?,?,?,?)")
             ->execute([$fid, $_SESSION['user_id'], $notes, $status]);
-        logActivity($pdo, $_SESSION['user_id'], 'STATUS_CHANGED', "Feedback #$fid marked as $status");
+       logActivity($pdo, 'STATUS_CHANGED', "Feedback #$fid marked as $status", $_SESSION['user_id']);
         $msg = 'Feedback updated successfully.';
     }
 }

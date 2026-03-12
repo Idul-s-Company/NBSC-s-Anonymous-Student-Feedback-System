@@ -4,6 +4,30 @@ function redirect($url) {
     exit;
 }
 
+function requireRole($role) {
+    if (!isset($_SESSION)) session_start();
+
+    if ($role === 'student') {
+        if (!isset($_SESSION['oauth_user_id'])) {
+            redirect(BASE_URL . '/index.php');
+        }
+    } else {
+        // admin or staff
+        if (!isset($_SESSION['role']) || $_SESSION['role'] !== $role) {
+            redirect(BASE_URL . '/index.php');
+        }
+    }
+}
+
+function currentUser() {
+    return [
+        'first_name' => $_SESSION['first_name'] ?? '',
+        'last_name'  => $_SESSION['last_name']  ?? '',
+        'role'       => $_SESSION['role']        ?? '',
+        'email'      => $_SESSION['email']       ?? $_SESSION['oauth_email'] ?? '',
+    ];
+}
+
 function sanitize($val) {
     return htmlspecialchars(trim($val), ENT_QUOTES, 'UTF-8');
 }
@@ -57,7 +81,11 @@ function categoryLabel($c) {
     return ucfirst(str_replace('_', ' ', $c));
 }
 
-
+function getUnreadNotifCount($pdo, $userId) {
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
+    $stmt->execute([$userId]);
+    return $stmt->fetchColumn();
+}
 
 function categoryIcon($cat) {
     $icons = [

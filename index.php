@@ -41,29 +41,53 @@ if (isset($_GET['code']) && isset($_GET['state']) && $_GET['state'] === ($_SESSI
         }
 
         // ── Check if email exists in the database ──
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND role = 'student' AND status = 'active'");
-        $stmt->execute([$email]);
-        $user = $stmt->fetch();
+       // ── Check if email exists in the database ──
+$stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND status = 'active'");
+$stmt->execute([$email]);
+$user = $stmt->fetch();
 
-        if (!$user) {
-            $_SESSION['oauth_error'] = 'Your account (' . htmlspecialchars($email) . ') was not found in the system. Please contact your administrator.';
-            unset($_SESSION['oauth_state']);
-            redirect(BASE_URL . '/index.php');
-        }
-
-        // ── Auth success — store session ──
-        $_SESSION['oauth_user_id'] = $user['user_id'];
-        $_SESSION['oauth_email']   = $email;
-        $_SESSION['oauth_name']    = $user['first_name'] . ' ' . $user['last_name'];
-        $_SESSION['oauth_avatar']  = $userInfo['picture'] ?? '';
-        unset($_SESSION['oauth_state']);
-    } else {
-        $_SESSION['oauth_error'] = 'Google authentication failed. Please try again.';
-    }
-
+if (!$user) {
+    $_SESSION['oauth_error'] = 'Your account (' . htmlspecialchars($email) . ') was not found in the system. Please contact your administrator.';
+    unset($_SESSION['oauth_state']);
     redirect(BASE_URL . '/index.php');
 }
 
+// ── Route by role ──
+if ($user['role'] === 'admin') {
+    $_SESSION['user_id']    = $user['user_id'];
+    $_SESSION['email']      = $email;
+    $_SESSION['first_name'] = $user['first_name'];
+    $_SESSION['last_name']  = $user['last_name'];
+    $_SESSION['role']       = 'admin';
+    $_SESSION['avatar']     = $userInfo['picture'] ?? '';
+    unset($_SESSION['oauth_state']);
+    redirect(BASE_URL . '/app/admin/dashboard.php');
+
+} elseif ($user['role'] === 'staff') {
+    $_SESSION['user_id']    = $user['user_id'];
+    $_SESSION['email']      = $email;
+    $_SESSION['first_name'] = $user['first_name'];
+    $_SESSION['last_name']  = $user['last_name'];
+    $_SESSION['role']       = 'staff';
+    $_SESSION['avatar']     = $userInfo['picture'] ?? '';
+    unset($_SESSION['oauth_state']);
+    redirect(BASE_URL . '/app/manager/dashboard.php');
+
+} elseif ($user['role'] === 'student') {
+    $_SESSION['oauth_user_id'] = $user['user_id'];
+    $_SESSION['oauth_email']   = $email;
+    $_SESSION['oauth_name']    = $user['first_name'] . ' ' . $user['last_name'];
+    $_SESSION['oauth_avatar']  = $userInfo['picture'] ?? '';
+    unset($_SESSION['oauth_state']);
+    redirect(BASE_URL . '/index.php');
+
+} else {
+    $_SESSION['oauth_error'] = 'Your account role is not recognized.';
+    unset($_SESSION['oauth_state']);
+    redirect(BASE_URL . '/index.php');
+}
+    }
+}
 // ── Google OAuth logout ──────────────────────────────────────────────────────
 if (isset($_GET['logout'])) {
     unset($_SESSION['oauth_user_id'], $_SESSION['oauth_email'], $_SESSION['oauth_name'], $_SESSION['oauth_avatar']);
