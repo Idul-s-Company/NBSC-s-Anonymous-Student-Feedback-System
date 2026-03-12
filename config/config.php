@@ -4,8 +4,8 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_NAME', 'working_schema');
 
-define('GOOGLE_CLIENT_ID',     '');
-define('GOOGLE_CLIENT_SECRET', '');
+define('GOOGLE_CLIENT_ID',     '248717550278-8t7887a72ldoipenmov3o4na56p5j70k.apps.googleusercontent.com');
+define('GOOGLE_CLIENT_SECRET', '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');
 
 
 define('BASE_URL', 'http://localhost/NBSC-s-Anonymous-Student-Feedback-System');
