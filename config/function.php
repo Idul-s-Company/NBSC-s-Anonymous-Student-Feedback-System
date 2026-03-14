@@ -29,7 +29,7 @@ function sanitize($val) {
     return htmlspecialchars(trim($val), ENT_QUOTES, 'UTF-8');
 }
 
-function logActivity($pdo, $userId, $action, $description) {
+function logActivity($pdo, $action, $description, $userId = null) {
     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] 
        ?? $_SERVER['REMOTE_ADDR'] 
        ?? '0.0.0.0';
