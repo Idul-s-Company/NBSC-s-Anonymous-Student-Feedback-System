@@ -48,15 +48,17 @@ function encryptUserId($userId) {
 
 function timeAgo($datetime) {
     $now  = new DateTime();
-    $then = new DateTime($datetime);
-    $diff = $now->diff($then);
-    if ($diff->days == 0) {
-        if ($diff->h == 0) return $diff->i . ' min ago';
-        return $diff->h . ' hr ago';
-    }
-    if ($diff->days == 1) return 'Yesterday';
-    if ($diff->days < 30) return $diff->days . ' days ago';
-    return $then->format('M d, Y');
+    $past = new DateTime($datetime);
+    $diff = $now->getTimestamp() - $past->getTimestamp();
+
+    if ($diff < 10)                          return 'Just now';
+    if ($diff < 60)                          return $diff . ' second' . ($diff != 1 ? 's' : '') . ' ago';
+    if ($diff < 3600)   { $m = floor($diff / 60);    return $m . ' minute' . ($m != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 86400)  { $h = floor($diff / 3600);  return $h . ' hour'   . ($h != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 604800) { $d = floor($diff / 86400); return $d . ' day'    . ($d != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 2592000){ $w = floor($diff / 604800);return $w . ' week'   . ($w != 1 ? 's' : '') . ' ago'; }
+    if ($diff < 31536000){$mo= floor($diff / 2592000);return $mo. ' month'  . ($mo!= 1 ? 's' : '') . ' ago'; }
+    $y = floor($diff / 31536000); return $y . ' year' . ($y != 1 ? 's' : '') . ' ago';
 }
 
 function priorityBadge($p) {
