@@ -386,6 +386,42 @@ if ($isAuthed) {
     }
 
     .feed-empty { text-align:center; padding:40px 20px; color:var(--text-muted); font-size:14px; }
+
+    
+/* ── Feedback Action Buttons (My Submissions) ── */
+.btn-fb-edit {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  background: var(--success);
+  color: #fff;
+}
+.btn-fb-edit:hover { opacity: 0.88; }
+
+.btn-fb-delete {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  background: var(--danger);
+  color: #fff;
+}
+.btn-fb-delete:hover { opacity: 0.88; }
   </style>
 </head>
 <body>
@@ -636,11 +672,23 @@ if ($isAuthed) {
         </div>
       <?php endif; ?>
 
-     <div class="fb-footer">
+   <div class="fb-footer">
   <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
-  <button class="comment-toggle" onclick="toggleComments('mine-<?= $fb['feedback_id'] ?>')">
-    💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
-  </button>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="comment-toggle" onclick="toggleComments('mine-<?= $fb['feedback_id'] ?>')">
+      💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
+    </button>
+    <button class="btn-fb-edit" onclick="openEdit(
+      <?= $fb['feedback_id'] ?>,
+      '<?= addslashes(sanitize($fb['message'])) ?>',
+      '<?= $fb['category'] ?>',
+      '<?= $fb['priority'] ?>'
+    )">Edit</button>
+    <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
+      <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+      <button type="submit" name="delete_feedback" class="btn-fb-delete">Delete</button>
+    </form>
+  </div>
 </div>
 
       <!-- Comments -->
