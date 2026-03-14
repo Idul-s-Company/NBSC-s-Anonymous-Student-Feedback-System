@@ -160,6 +160,19 @@ if ($isAuthed) {
     $stmt->execute([$authUserId]);
     $mineList = $stmt->fetchAll();
 }
+
+   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
+    $fid = (int)($_POST['feedback_id'] ?? 0);
+    if ($fid && $authUserId) {
+        $pdo->prepare("DELETE FROM comments WHERE feedback_id = ?")->execute([$fid]);
+        $pdo->prepare("DELETE FROM feedback_reviews WHERE feedback_id = ?")->execute([$fid]);
+        $pdo->prepare("DELETE FROM feedback WHERE feedback_id = ? AND user_id = ?")->execute([$fid, $authUserId]);
+    }
+    header("Location: index.php");
+    exit;
+}
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -686,7 +699,10 @@ if ($isAuthed) {
     )">Edit</button>
     <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
       <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-      <button type="submit" name="delete_feedback" class="btn-fb-delete">Delete</button>
+      <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
+  <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+  <button type="submit" name="delete_feedback" class="btn-fb-delete">Delete</button>
+</form>
     </form>
   </div>
 </div>
@@ -758,6 +774,7 @@ function showTab(tab, btn) {
 function toggleComments(id) {
   document.getElementById('comments-' + id).classList.toggle('open');
 }
+
 </script>
 </body>
 </html>
