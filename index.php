@@ -601,41 +601,75 @@ if ($isAuthed) {
     </div>
 
     <!-- My Submissions -->
-    <div id="tab-mine" style="display:none;">
-      <?php if (!$isAuthed): ?>
-        <div class="feed-empty">
-          <div style="font-size:36px;margin-bottom:10px;">🔒</div>
-          <p style="margin-bottom:14px;">Log in to see your submissions.</p>
-        </div>
-      <?php elseif (empty($mineList)): ?>
-        <div class="feed-empty">
-          <div style="font-size:36px;margin-bottom:10px;">📭</div>
-          No submissions yet. Submit something above!
-        </div>
-      <?php else: foreach ($mineList as $fb): ?>
-        <div class="fb-card">
-          <div class="fb-card-top">
-            <div class="fb-meta">
-              <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
-              <?= priorityBadge($fb['priority']) ?>
-              <?= statusBadge($fb['status']) ?>
-              <span class="my-badge">MINE</span>
-            </div>
-            <div class="fb-message"><?= sanitize($fb['message']) ?></div>
-          </div>
-          <?php if ($fb['review_notes']): ?>
-            <div class="review-note">
-              <strong>Admin Response</strong>
-              <?= sanitize($fb['review_notes']) ?>
-            </div>
-          <?php endif; ?>
-          <div class="fb-footer">
-            <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
-            <span class="fb-time">💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?></span>
-          </div>
-        </div>
-      <?php endforeach; endif; ?>
+   <div id="tab-mine" style="display:none;">
+  <?php if (!$isAuthed): ?>
+    <div class="feed-empty">
+      <div style="font-size:36px;margin-bottom:10px;">🔒</div>
+      <p style="margin-bottom:14px;">Log in to see your submissions.</p>
     </div>
+  <?php elseif (empty($mineList)): ?>
+    <div class="feed-empty">
+      <div style="font-size:36px;margin-bottom:10px;">📭</div>
+      No submissions yet. Submit something above!
+    </div>
+  <?php else: foreach ($mineList as $fb): ?>
+    <div class="fb-card">
+      <div class="fb-card-top">
+        <div class="fb-meta">
+          <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
+          <?= priorityBadge($fb['priority']) ?>
+          <?= statusBadge($fb['status']) ?>
+          <span class="my-badge">MINE</span>
+        </div>
+        <div class="fb-message"><?= sanitize($fb['message']) ?></div>
+      </div>
+
+      <?php if ($fb['status'] === 'resolved' && $fb['review_notes']): ?>
+        <div class="review-note">
+          <strong>✅ Admin Response</strong>
+          <?= sanitize($fb['review_notes']) ?>
+        </div>
+      <?php elseif ($fb['status'] === 'reviewed' && $fb['review_notes']): ?>
+        <div class="review-note" style="background:#eff6ff;border-color:#3b82f6;color:#1e40af;">
+          <strong>👀 Under Review</strong>
+          <?= sanitize($fb['review_notes']) ?>
+        </div>
+      <?php endif; ?>
+
+     <div class="fb-footer">
+  <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
+  <button class="comment-toggle" onclick="toggleComments('mine-<?= $fb['feedback_id'] ?>')">
+    💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
+  </button>
+</div>
+
+      <!-- Comments -->
+      <div class="comments-section" id="comments-mine-<?= $fb['feedback_id'] ?>">
+        <?php
+          $coms = $pdo->prepare("SELECT * FROM comments WHERE feedback_id=? AND status='active' ORDER BY created_at ASC");
+          $coms->execute([$fb['feedback_id']]);
+          foreach ($coms->fetchAll() as $c):
+            $initials = strtoupper(substr($c['anonymous_id'], 5, 2));
+        ?>
+          <div class="comment-item">
+            <div class="comment-avatar"><?= $initials ?></div>
+            <div class="comment-body">
+              <div class="comment-anon"><?= sanitize($c['anonymous_id']) ?></div>
+              <div class="comment-text"><?= sanitize($c['content']) ?></div>
+              <div class="comment-time"><?= timeAgo($c['created_at']) ?></div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+
+        <form method="POST" class="comment-form">
+          <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+          <input type="text" name="comment_content" class="comment-input" placeholder="Add anonymous comment..." required>
+          <button type="submit" name="post_comment" class="comment-submit">Post</button>
+        </form>
+      </div>
+    </div>
+  <?php endforeach; endif; ?>
+</div>
 
   </div>
 </div>
