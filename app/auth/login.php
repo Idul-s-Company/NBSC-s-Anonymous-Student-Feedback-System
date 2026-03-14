@@ -63,6 +63,7 @@ renderHeader('Login');
       <div class="alert alert-danger"><?= sanitize($error) ?></div>
     <?php endif; ?>
 
+    
     <form method="POST">
       <div class="form-group">
         <label class="form-label">Email Address</label>

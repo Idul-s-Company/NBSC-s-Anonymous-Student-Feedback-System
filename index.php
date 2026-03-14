@@ -10,3 +10,4 @@ if (isLoggedIn()) {
     redirect(BASE_URL . '/app/user/index.php');
 }
 redirect(BASE_URL . '/app/auth/login.php');
+
