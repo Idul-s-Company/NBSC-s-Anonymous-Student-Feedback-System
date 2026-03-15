@@ -682,16 +682,17 @@ if ($isAuthed) {
           <?= sanitize($fb['message']) ?>
         </div>
 
-      <!-- Editable message (hidden by default) -->
-<form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;margin-top:8px;">
-  <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-  <input type="hidden" name="update_feedback" value="1">
-  <textarea name="message" class="msg-area" maxlength="200"
-    style="min-height:70px;width:100%;"
-    oninput="updateMineCount(<?= $fb['feedback_id'] ?>)"
-    id="msg-edit-<?= $fb['feedback_id'] ?>"><?= sanitize($fb['message']) ?></textarea>
-  <div class="char-count"><span id="mine-char-<?= $fb['feedback_id'] ?>"><?= strlen($fb['message']) ?></span>/200</div>
-</form>
+        <!-- Editable message (hidden by default) -->
+        <form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;margin-top:8px;">
+          <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+          <input type="hidden" name="update_feedback" value="1">
+          <textarea name="message" class="msg-area" maxlength="200"
+            style="min-height:70px;width:100%;"
+            oninput="updateMineCount(<?= $fb['feedback_id'] ?>)"
+            id="msg-edit-<?= $fb['feedback_id'] ?>"><?= sanitize($fb['message']) ?></textarea>
+          <div class="char-count"><span id="mine-char-<?= $fb['feedback_id'] ?>"><?= strlen($fb['message']) ?></span>/200</div>
+        </form>
+      </div>
 
       <?php if ($fb['status'] === 'resolved' && $fb['review_notes']): ?>
         <div class="review-note">
@@ -713,25 +714,21 @@ if ($isAuthed) {
           </button>
 
           <?php if ($fb['status'] === 'pending'): ?>
-            <!-- Edit toggle button -->
             <button class="btn-fb-edit" id="edit-btn-<?= $fb['feedback_id'] ?>"
               onclick="toggleEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
 
-            <!-- Save button (hidden until editing) -->
-           <button class="btn-fb-edit" id="save-btn-<?= $fb['feedback_id'] ?>"
-  style="display:none;background:#1a56db;"
-  onclick="document.getElementById('edit-form-<?= $fb['feedback_id'] ?>').submit();">
-  Save
-</button>
+            <button class="btn-fb-edit" id="save-btn-<?= $fb['feedback_id'] ?>"
+              style="display:none;background:#1a56db;"
+              onclick="document.getElementById('edit-form-<?= $fb['feedback_id'] ?>').submit();">
+              Save
+            </button>
 
-            <!-- Cancel button (hidden until editing) -->
             <button class="btn-fb-edit" id="cancel-btn-<?= $fb['feedback_id'] ?>"
               style="display:none;background:#6b7280;"
               onclick="cancelEdit(<?= $fb['feedback_id'] ?>, '<?= addslashes(sanitize($fb['message'])) ?>')">
               Cancel
             </button>
 
-            <!-- Delete button -->
             <form method="POST" style="display:inline;"
               onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
               <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
@@ -764,10 +761,10 @@ if ($isAuthed) {
           <button type="submit" name="post_comment" class="comment-submit">Post</button>
         </form>
       </div>
+
     </div>
   <?php endforeach; endif; ?>
 </div>
-
   </div>
 </div>
 
@@ -809,6 +806,19 @@ function toggleComments(id) {
 }
 
 function toggleEdit(id) {
+  // Cancel any currently open edit first
+  document.querySelectorAll('[id^="edit-form-"]').forEach(form => {
+    if (form.style.display !== 'none') {
+      const openId = form.id.replace('edit-form-', '');
+      document.getElementById('msg-text-' + openId).style.display = 'block';
+      document.getElementById('edit-form-' + openId).style.display = 'none';
+      document.getElementById('edit-btn-' + openId).style.display = 'inline-flex';
+      document.getElementById('save-btn-' + openId).style.display = 'none';
+      document.getElementById('cancel-btn-' + openId).style.display = 'none';
+    }
+  });
+
+  // Open the clicked one
   document.getElementById('msg-text-' + id).style.display = 'none';
   document.getElementById('edit-form-' + id).style.display = 'block';
   document.getElementById('edit-btn-' + id).style.display = 'none';
