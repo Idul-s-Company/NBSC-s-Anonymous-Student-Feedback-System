@@ -161,16 +161,22 @@ if ($isAuthed) {
     $mineList = $stmt->fetchAll();
 }
 
-   if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
-    $fid = (int)($_POST['feedback_id'] ?? 0);
-    if ($fid && $authUserId) {
-        $pdo->prepare("DELETE FROM comments WHERE feedback_id = ?")->execute([$fid]);
-        $pdo->prepare("DELETE FROM feedback_reviews WHERE feedback_id = ?")->execute([$fid]);
-        $pdo->prepare("DELETE FROM feedback WHERE feedback_id = ? AND user_id = ?")->execute([$fid, $authUserId]);
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_feedback'])) {
+    $fid     = (int)($_POST['feedback_id'] ?? 0);
+    $message = trim($_POST['message'] ?? '');
+    if ($fid && $authUserId && strlen($message) >= 10 && strlen($message) <= 200) {
+        $check = $pdo->prepare("SELECT status FROM feedback WHERE feedback_id = ? AND user_id = ?");
+        $check->execute([$fid, $authUserId]);
+        $status = $check->fetchColumn();
+        if ($status === 'pending') {
+            $pdo->prepare("UPDATE feedback SET message = ? WHERE feedback_id = ? AND user_id = ?")
+                ->execute([$message, $fid, $authUserId]);
+        }
     }
     header("Location: index.php");
     exit;
 }
+
 
 
 ?>
@@ -650,7 +656,7 @@ if ($isAuthed) {
     </div>
 
     <!-- My Submissions -->
-   <div id="tab-mine" style="display:none;">
+  <div id="tab-mine" style="display:none;">
   <?php if (!$isAuthed): ?>
     <div class="feed-empty">
       <div style="font-size:36px;margin-bottom:10px;">🔒</div>
@@ -670,8 +676,22 @@ if ($isAuthed) {
           <?= statusBadge($fb['status']) ?>
           <span class="my-badge">MINE</span>
         </div>
-        <div class="fb-message"><?= sanitize($fb['message']) ?></div>
-      </div>
+
+        <!-- Static message (default view) -->
+        <div class="fb-message" id="msg-text-<?= $fb['feedback_id'] ?>">
+          <?= sanitize($fb['message']) ?>
+        </div>
+
+      <!-- Editable message (hidden by default) -->
+<form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;margin-top:8px;">
+  <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+  <input type="hidden" name="update_feedback" value="1">
+  <textarea name="message" class="msg-area" maxlength="200"
+    style="min-height:70px;width:100%;"
+    oninput="updateMineCount(<?= $fb['feedback_id'] ?>)"
+    id="msg-edit-<?= $fb['feedback_id'] ?>"><?= sanitize($fb['message']) ?></textarea>
+  <div class="char-count"><span id="mine-char-<?= $fb['feedback_id'] ?>"><?= strlen($fb['message']) ?></span>/200</div>
+</form>
 
       <?php if ($fb['status'] === 'resolved' && $fb['review_notes']): ?>
         <div class="review-note">
@@ -685,27 +705,41 @@ if ($isAuthed) {
         </div>
       <?php endif; ?>
 
-   <div class="fb-footer">
-  <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <button class="comment-toggle" onclick="toggleComments('mine-<?= $fb['feedback_id'] ?>')">
-      💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
-    </button>
-    <button class="btn-fb-edit" onclick="openEdit(
-      <?= $fb['feedback_id'] ?>,
-      '<?= addslashes(sanitize($fb['message'])) ?>',
-      '<?= $fb['category'] ?>',
-      '<?= $fb['priority'] ?>'
-    )">Edit</button>
-    <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
-      <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-      <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
-  <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-  <button type="submit" name="delete_feedback" class="btn-fb-delete">Delete</button>
-</form>
-    </form>
-  </div>
-</div>
+      <div class="fb-footer">
+        <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="comment-toggle" onclick="toggleComments('mine-<?= $fb['feedback_id'] ?>')">
+            💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
+          </button>
+
+          <?php if ($fb['status'] === 'pending'): ?>
+            <!-- Edit toggle button -->
+            <button class="btn-fb-edit" id="edit-btn-<?= $fb['feedback_id'] ?>"
+              onclick="toggleEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
+
+            <!-- Save button (hidden until editing) -->
+           <button class="btn-fb-edit" id="save-btn-<?= $fb['feedback_id'] ?>"
+  style="display:none;background:#1a56db;"
+  onclick="document.getElementById('edit-form-<?= $fb['feedback_id'] ?>').submit();">
+  Save
+</button>
+
+            <!-- Cancel button (hidden until editing) -->
+            <button class="btn-fb-edit" id="cancel-btn-<?= $fb['feedback_id'] ?>"
+              style="display:none;background:#6b7280;"
+              onclick="cancelEdit(<?= $fb['feedback_id'] ?>, '<?= addslashes(sanitize($fb['message'])) ?>')">
+              Cancel
+            </button>
+
+            <!-- Delete button -->
+            <form method="POST" style="display:inline;"
+              onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
+              <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+              <button type="submit" name="delete_feedback" class="btn-fb-delete">Delete</button>
+            </form>
+          <?php endif; ?>
+        </div>
+      </div>
 
       <!-- Comments -->
       <div class="comments-section" id="comments-mine-<?= $fb['feedback_id'] ?>">
@@ -724,7 +758,6 @@ if ($isAuthed) {
             </div>
           </div>
         <?php endforeach; ?>
-
         <form method="POST" class="comment-form">
           <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
           <input type="text" name="comment_content" class="comment-input" placeholder="Add anonymous comment..." required>
@@ -773,6 +806,28 @@ function showTab(tab, btn) {
 
 function toggleComments(id) {
   document.getElementById('comments-' + id).classList.toggle('open');
+}
+
+function toggleEdit(id) {
+  document.getElementById('msg-text-' + id).style.display = 'none';
+  document.getElementById('edit-form-' + id).style.display = 'block';
+  document.getElementById('edit-btn-' + id).style.display = 'none';
+  document.getElementById('save-btn-' + id).style.display = 'inline-flex';
+  document.getElementById('cancel-btn-' + id).style.display = 'inline-flex';
+}
+
+function cancelEdit(id, original) {
+  document.getElementById('msg-text-' + id).style.display = 'block';
+  document.getElementById('edit-form-' + id).style.display = 'none';
+  document.getElementById('edit-btn-' + id).style.display = 'inline-flex';
+  document.getElementById('save-btn-' + id).style.display = 'none';
+  document.getElementById('cancel-btn-' + id).style.display = 'none';
+  document.getElementById('msg-edit-' + id).value = original;
+}
+
+function updateMineCount(id) {
+  document.getElementById('mine-char-' + id).textContent =
+    document.getElementById('msg-edit-' + id).value.length;
 }
 
 </script>
