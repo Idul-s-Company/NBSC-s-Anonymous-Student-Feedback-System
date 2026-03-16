@@ -492,177 +492,168 @@ if ($isAuthed) {
     </div>
     <?php endif; ?>
 
-    <!-- Submit Box: Login or Feedback Form -->
-    <div class="submit-box">
-      <?php if (!$isAuthed): ?>
-        <!-- LOGIN FORM -->
-        <div class="submit-box-header">
-          <div class="header-logo">💬</div>
-          <h2>NBSC Feedback</h2>
-          <p>Anonymous Student Feedback System</p>
-        </div>
-        <div class="submit-box-body">
-          <form method="POST">
-            <div class="login-field">
-              <label>Email Address</label>
-              <input type="email" name="email" placeholder="you@nbsc.edu.ph" required>
-            </div>
-            <div class="login-field">
-              <label>Password</label>
-              <input type="password" name="password" placeholder="••••••••" required>
-            </div>
-            <button type="submit" name="login" class="submit-btn">Sign In</button>
-          </form>
-          <p class="login-note">Feedback is submitted anonymously. Your identity is protected.</p>
-        </div>
-
-      <?php elseif ($submitted): ?>
-        <!-- SUCCESS STATE -->
-        <div class="submit-box-header">
-          <h2>Send Anonymous Feedback 💬</h2>
-          <p>Your identity is fully protected. No personal data is linked to your submission.</p>
-        </div>
-        <div class="submit-box-body">
-          <div class="success-box">
-            <div class="success-icon">✅</div>
-            <h3>Feedback Sent!</h3>
-            <p>Your anonymous feedback has been submitted successfully.<br>The admin team will review it shortly.</p>
-            <button onclick="resetForm()" class="submit-btn" style="margin-top:16px;max-width:220px;">Send Another</button>
-          </div>
-        </div>
-
-      <?php else: ?>
-        <!-- FEEDBACK FORM -->
-        <div class="submit-box-header">
-          <h2>Send Anonymous Feedback 💬</h2>
-          <p>Your identity is fully protected. No personal data is linked to your submission.</p>
-        </div>
-        <div class="submit-box-body">
-          <form method="POST" id="feedbackForm">
-            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Category</div>
-            <div class="category-grid">
-              <?php foreach (['academic','facilities','services','faculty','administration','suggestion','complaint','general','other'] as $cat): ?>
-                <div class="cat-btn" onclick="selectCat('<?= $cat ?>')" id="cat-<?= $cat ?>">
-                  <span class="cat-icon"><?= categoryIcon($cat) ?></span>
-                  <?= categoryLabel($cat) ?>
-                </div>
-              <?php endforeach; ?>
-            </div>
-            <input type="hidden" name="category" id="category-input" value="general">
-
-            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Priority</div>
-            <div class="priority-row">
-              <?php foreach (['Low','Medium','High','Urgent'] as $p): ?>
-                <div class="pri-btn" onclick="selectPri('<?= $p ?>')" id="pri-<?= $p ?>"><?= $p ?></div>
-              <?php endforeach; ?>
-            </div>
-            <input type="hidden" name="priority" id="priority-input" value="Low">
-
-            <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Your Message</div>
-            <textarea name="message" id="msg-input" class="msg-area" maxlength="200"
-              placeholder="Describe your concern clearly. Avoid sharing personal details about yourself or others..."
-              required oninput="updateCount()"></textarea>
-            <div class="char-count"><span id="char-count">0</span>/200</div>
-
-            <button type="submit" name="submit_feedback" class="submit-btn">Send Anonymously 🔒</button>
-          </form>
-        </div>
-      <?php endif; ?>
-    </div>
-
-    <!-- Feed Tabs -->
-    <div class="feed-tabs">
-      <button class="feed-tab active" onclick="showTab('all',this)">All Feedback</button>
-      <button class="feed-tab" onclick="showTab('mine',this)">My Submissions</button>
-    </div>
-
-    <!-- All Feedback -->
-    <div id="tab-all">
-      <?php if (empty($feedbacks)): ?>
-        <div class="feed-empty">No feedback yet. Be the first to submit! 🚀</div>
-      <?php else: foreach ($feedbacks as $fb): ?>
-        <div class="fb-card">
-          <div class="fb-card-top">
-            <div class="fb-meta">
-              <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
-              <?= priorityBadge($fb['priority']) ?>
-              <?= statusBadge($fb['status']) ?>
-              <?php if ($isAuthed && $fb['user_id'] == $authUserId): ?>
-                <span class="my-badge">MINE</span>
-              <?php endif; ?>
-            </div>
-            <div class="fb-message"><?= sanitize($fb['message']) ?></div>
-          </div>
-
-          <?php if ($fb['status'] === 'resolved' && $fb['review_notes']): ?>
-            <div class="review-note">
-              <strong>✅ Admin Response</strong>
-              <?= sanitize($fb['review_notes']) ?>
-            </div>
-          <?php elseif ($fb['status'] === 'reviewed' && $fb['review_notes']): ?>
-            <div class="review-note" style="background:#eff6ff;border-color:#3b82f6;color:#1e40af;">
-              <strong>👀 Under Review</strong>
-              <?= sanitize($fb['review_notes']) ?>
-            </div>
-          <?php endif; ?>
-
-          <div class="fb-footer">
-            <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
-            <button class="comment-toggle" onclick="toggleComments(<?= $fb['feedback_id'] ?>)">
-              💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
-            </button>
-          </div>
-
-          <!-- Comments -->
-          <div class="comments-section" id="comments-<?= $fb['feedback_id'] ?>">
-            <?php
-              $coms = $pdo->prepare("SELECT * FROM comments WHERE feedback_id=? AND status='active' ORDER BY created_at ASC");
-              $coms->execute([$fb['feedback_id']]);
-              foreach ($coms->fetchAll() as $c):
-                $initials = strtoupper(substr($c['anonymous_id'], 5, 2));
-            ?>
-              <div class="comment-item">
-                <div class="comment-avatar"><?= $initials ?></div>
-                <div class="comment-body">
-                  <div class="comment-anon"><?= sanitize($c['anonymous_id']) ?></div>
-                  <div class="comment-text"><?= sanitize($c['content']) ?></div>
-                  <div class="comment-time"><?= timeAgo($c['created_at']) ?></div>
-                </div>
-              </div>
-            <?php endforeach; ?>
-
-            <?php if ($isAuthed): ?>
-              <form method="POST" class="comment-form">
-                <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
-                <input type="text" name="comment_content" class="comment-input" placeholder="Add anonymous comment..." required>
-                <button type="submit" name="post_comment" class="comment-submit">Post</button>
-              </form>
-            <?php else: ?>
-              <div class="comment-login-prompt">
-                <span>Login first to comment</span>
-              </div>
-            <?php endif; ?>
-          </div>
-        </div>
-      <?php endforeach; endif; ?>
-
-      <?php if ($pages > 1): ?>
-        <div class="pagination" style="justify-content:center;">
-          <?php for ($p = 1; $p <= $pages; $p++): ?>
-            <a href="?page=<?= $p ?>" class="page-btn <?= $p == $feedPage ? 'active' : '' ?>"><?= $p ?></a>
-          <?php endfor; ?>
-        </div>
-      <?php endif; ?>
-    </div>
-
-    <!-- My Submissions -->
-  <div id="tab-mine" style="display:none;">
+<!-- Submit Box: Login or Feedback Form -->
+<div class="submit-box">
   <?php if (!$isAuthed): ?>
-    <div class="feed-empty">
-      <div style="font-size:36px;margin-bottom:10px;">🔒</div>
-      <p style="margin-bottom:14px;">Log in to see your submissions.</p>
+    <!-- LOGIN FORM -->
+    <div class="submit-box-header">
+      <div class="header-logo">💬</div>
+      <h2>NBSC Feedback</h2>
+      <p>Anonymous Student Feedback System</p>
     </div>
-  <?php elseif (empty($mineList)): ?>
+    <div class="submit-box-body">
+      <form method="POST">
+        <div class="login-field">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="you@nbsc.edu.ph" required>
+        </div>
+        <div class="login-field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" name="login" class="submit-btn">Sign In</button>
+      </form>
+      <p class="login-note">Feedback is submitted anonymously. Your identity is protected.</p>
+    </div>
+
+  <?php elseif ($submitted): ?>
+    <!-- SUCCESS STATE -->
+    <div class="submit-box-header">
+      <h2>Send Anonymous Feedback 💬</h2>
+      <p>Your identity is fully protected. No personal data is linked to your submission.</p>
+    </div>
+    <div class="submit-box-body">
+      <div class="success-box">
+        <div class="success-icon">✅</div>
+        <h3>Feedback Sent!</h3>
+        <p>Your anonymous feedback has been submitted successfully.<br>The admin team will review it shortly.</p>
+        <button onclick="resetForm()" class="submit-btn" style="margin-top:16px;max-width:220px;">Send Another</button>
+      </div>
+    </div>
+
+  <?php else: ?>
+    <!-- FEEDBACK FORM -->
+    <div class="submit-box-header">
+      <h2>Send Anonymous Feedback 💬</h2>
+      <p>Your identity is fully protected. No personal data is linked to your submission.</p>
+    </div>
+    <div class="submit-box-body">
+      <form method="POST" id="feedbackForm">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Category</div>
+        <div class="category-grid">
+          <?php foreach (['academic','facilities','services','faculty','administration','suggestion','complaint','general','other'] as $cat): ?>
+            <div class="cat-btn" onclick="selectCat('<?= $cat ?>')" id="cat-<?= $cat ?>">
+              <span class="cat-icon"><?= categoryIcon($cat) ?></span>
+              <?= categoryLabel($cat) ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+        <input type="hidden" name="category" id="category-input" value="general">
+
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Priority</div>
+        <div class="priority-row">
+          <?php foreach (['Low','Medium','High','Urgent'] as $p): ?>
+            <div class="pri-btn" onclick="selectPri('<?= $p ?>')" id="pri-<?= $p ?>"><?= $p ?></div>
+          <?php endforeach; ?>
+        </div>
+        <input type="hidden" name="priority" id="priority-input" value="Low">
+
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">Your Message</div>
+        <textarea name="message" id="msg-input" class="msg-area" maxlength="200"
+          placeholder="Describe your concern clearly. Avoid sharing personal details about yourself or others..."
+          required oninput="updateCount()"></textarea>
+        <div class="char-count"><span id="char-count">0</span>/200</div>
+
+        <button type="submit" name="submit_feedback" class="submit-btn">Send Anonymously 🔒</button>
+      </form>
+    </div>
+  <?php endif; ?>
+</div>
+
+  
+<?php if ($isAuthed): ?>
+<!-- Feed Tabs — only shown when logged in -->
+<div class="feed-tabs">
+  <button class="feed-tab active" onclick="showTab('all',this)">All Feedback</button>
+  <button class="feed-tab" onclick="showTab('mine',this)">My Submissions</button>
+</div>
+
+<!-- All Feedback -->
+<div id="tab-all">
+  <?php if (empty($feedbacks)): ?>
+    <div class="feed-empty">No feedback yet. Be the first to submit! 🚀</div>
+  <?php else: foreach ($feedbacks as $fb): ?>
+    <div class="fb-card">
+      <div class="fb-card-top">
+        <div class="fb-meta">
+          <span class="fb-cat"><?= categoryIcon($fb['category']) ?> <?= sanitize(categoryLabel($fb['category'])) ?></span>
+          <?= priorityBadge($fb['priority']) ?>
+          <?= statusBadge($fb['status']) ?>
+          <?php if ($fb['user_id'] == $authUserId): ?>
+            <span class="my-badge">MINE</span>
+          <?php endif; ?>
+        </div>
+        <div class="fb-message"><?= sanitize($fb['message']) ?></div>
+      </div>
+
+      <?php if ($fb['status'] === 'resolved' && $fb['review_notes']): ?>
+        <div class="review-note">
+          <strong>✅ Admin Response</strong>
+          <?= sanitize($fb['review_notes']) ?>
+        </div>
+      <?php elseif ($fb['status'] === 'reviewed' && $fb['review_notes']): ?>
+        <div class="review-note" style="background:#eff6ff;border-color:#3b82f6;color:#1e40af;">
+          <strong>👀 Under Review</strong>
+          <?= sanitize($fb['review_notes']) ?>
+        </div>
+      <?php endif; ?>
+
+      <div class="fb-footer">
+        <span class="fb-time"><?= timeAgo($fb['submitted_at']) ?></span>
+        <button class="comment-toggle" onclick="toggleComments(<?= $fb['feedback_id'] ?>)">
+          💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
+        </button>
+      </div>
+
+      <!-- Comments -->
+      <div class="comments-section" id="comments-<?= $fb['feedback_id'] ?>">
+        <?php
+          $coms = $pdo->prepare("SELECT * FROM comments WHERE feedback_id=? AND status='active' ORDER BY created_at ASC");
+          $coms->execute([$fb['feedback_id']]);
+          foreach ($coms->fetchAll() as $c):
+            $initials = strtoupper(substr($c['anonymous_id'], 5, 2));
+        ?>
+          <div class="comment-item">
+            <div class="comment-avatar"><?= $initials ?></div>
+            <div class="comment-body">
+              <div class="comment-anon"><?= sanitize($c['anonymous_id']) ?></div>
+              <div class="comment-text"><?= sanitize($c['content']) ?></div>
+              <div class="comment-time"><?= timeAgo($c['created_at']) ?></div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+
+        <form method="POST" class="comment-form">
+          <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
+          <input type="text" name="comment_content" class="comment-input" placeholder="Add anonymous comment..." required>
+          <button type="submit" name="post_comment" class="comment-submit">Post</button>
+        </form>
+      </div>
+    </div>
+  <?php endforeach; endif; ?>
+
+  <?php if ($pages > 1): ?>
+    <div class="pagination" style="justify-content:center;">
+      <?php for ($p = 1; $p <= $pages; $p++): ?>
+        <a href="?page=<?= $p ?>" class="page-btn <?= $p == $feedPage ? 'active' : '' ?>"><?= $p ?></a>
+      <?php endfor; ?>
+    </div>
+  <?php endif; ?>
+</div>
+
+<!-- My Submissions -->
+<div id="tab-mine" style="display:none;">
+  <?php if (empty($mineList)): ?>
     <div class="feed-empty">
       <div style="font-size:36px;margin-bottom:10px;">📭</div>
       No submissions yet. Submit something above!
@@ -676,13 +667,9 @@ if ($isAuthed) {
           <?= statusBadge($fb['status']) ?>
           <span class="my-badge">MINE</span>
         </div>
-
-        <!-- Static message (default view) -->
         <div class="fb-message" id="msg-text-<?= $fb['feedback_id'] ?>">
           <?= sanitize($fb['message']) ?>
         </div>
-
-        <!-- Editable message (hidden by default) -->
         <form method="POST" id="edit-form-<?= $fb['feedback_id'] ?>" style="display:none;margin-top:8px;">
           <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
           <input type="hidden" name="update_feedback" value="1">
@@ -712,23 +699,15 @@ if ($isAuthed) {
           <button class="comment-toggle" onclick="toggleComments('mine-<?= $fb['feedback_id'] ?>')">
             💬 <?= $fb['comment_count'] ?> comment<?= $fb['comment_count'] != 1 ? 's' : '' ?>
           </button>
-
           <?php if ($fb['status'] === 'pending'): ?>
             <button class="btn-fb-edit" id="edit-btn-<?= $fb['feedback_id'] ?>"
               onclick="toggleEdit(<?= $fb['feedback_id'] ?>)">Edit</button>
-
             <button class="btn-fb-edit" id="save-btn-<?= $fb['feedback_id'] ?>"
               style="display:none;background:#1a56db;"
-              onclick="document.getElementById('edit-form-<?= $fb['feedback_id'] ?>').submit();">
-              Save
-            </button>
-
+              onclick="document.getElementById('edit-form-<?= $fb['feedback_id'] ?>').submit();">Save</button>
             <button class="btn-fb-edit" id="cancel-btn-<?= $fb['feedback_id'] ?>"
               style="display:none;background:#6b7280;"
-              onclick="cancelEdit(<?= $fb['feedback_id'] ?>, '<?= addslashes(sanitize($fb['message'])) ?>')">
-              Cancel
-            </button>
-
+              onclick="cancelEdit(<?= $fb['feedback_id'] ?>, '<?= addslashes(sanitize($fb['message'])) ?>')">Cancel</button>
             <form method="POST" style="display:inline;"
               onsubmit="return confirm('Are you sure you want to permanently delete this feedback?');">
               <input type="hidden" name="feedback_id" value="<?= $fb['feedback_id'] ?>">
@@ -738,7 +717,6 @@ if ($isAuthed) {
         </div>
       </div>
 
-      <!-- Comments -->
       <div class="comments-section" id="comments-mine-<?= $fb['feedback_id'] ?>">
         <?php
           $coms = $pdo->prepare("SELECT * FROM comments WHERE feedback_id=? AND status='active' ORDER BY created_at ASC");
@@ -761,9 +739,18 @@ if ($isAuthed) {
           <button type="submit" name="post_comment" class="comment-submit">Post</button>
         </form>
       </div>
-
     </div>
   <?php endforeach; endif; ?>
+</div>
+
+<?php else: ?>
+<!-- Not logged in — show prompt instead of feed -->
+<div class="feed-empty" style="background:#fff;border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,0.07);padding:40px 20px;">
+  <div style="font-size:36px;margin-bottom:10px;">🔒</div>
+  <p style="font-weight:600;font-size:15px;margin-bottom:6px;">Log in to view feedbacks</p>
+  <p style="font-size:13px;color:var(--text-muted);">Sign in with your NBSC account to submit and browse feedback.</p>
+</div>
+<?php endif; ?>
 </div>
   </div>
 </div>
